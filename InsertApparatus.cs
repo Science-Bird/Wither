@@ -1,0 +1,52 @@
+using GameNetcodeStuff;
+using System.Collections;
+using Unity.Netcode;
+using UnityEngine;
+
+namespace Wither;
+public class InsertApparatus : NetworkBehaviour
+{
+	public StartOfRound playersManager;
+
+	public AnimatedObjectTrigger objectsEnableTrigger;
+
+	public InteractTrigger insertTrigger;
+
+	public AnimatedObjectTrigger animatedDoorTrigger;
+
+	public bool isInserted;
+
+	private void Update()
+	{
+		if (!isInserted)
+		{
+			if (GameNetworkManager.Instance.localPlayerController.currentlyHeldObjectServer != null && GameNetworkManager.Instance.localPlayerController.currentlyHeldObjectServer.itemProperties.itemName == "Apparatus")
+			{
+				if (StartOfRound.Instance.localPlayerUsingController)
+					{
+						insertTrigger.hoverTip = "Insert apparatus: [D-pad up]";
+					}
+				else
+					{
+						insertTrigger.hoverTip = "Insert apparatus: [ E ]";
+					}
+			}
+			else
+			{
+				insertTrigger.hoverTip = "Nothing to insert";
+			}
+		}
+	}
+
+	public void InsertItem()
+	{
+		PlayerControllerB playerInserting = GameNetworkManager.Instance.localPlayerController;
+		if (playerInserting.currentlyHeldObjectServer != null && playerInserting.currentlyHeldObjectServer.itemProperties.itemName == "Apparatus" && !playerInserting.isGrabbingObjectAnimation)
+		{
+			playerInserting.DespawnHeldObject();
+            objectsEnableTrigger.TriggerAnimation(GameNetworkManager.Instance.localPlayerController);
+            animatedDoorTrigger.TriggerAnimation(GameNetworkManager.Instance.localPlayerController);
+		}
+	}
+}
+
