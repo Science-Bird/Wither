@@ -32,20 +32,35 @@ public class PropTP : NetworkBehaviour
 
 	private float yLastFrame = 0f;
 
-	private int scrapValue;
+    private NetworkVariable<int> scrapValueNetworked = new NetworkVariable<int>();
 
-	private void Start()
+    private int priorScrapValue = 0;
+
+	private int scrapValue = 0;
+
+	private bool delayedTP = false;
+
+    private void Start()
 	{
 		posDiff = telePosition - scrapProps[0].transform.position;
 		posDiff1 = scrapProps[1].transform.position - scrapProps[0].transform.position;
         posDiff2 = scrapProps[2].transform.position - scrapProps[0].transform.position;
     }
 
-	private void Update()
+    private void Update()
 	{
-		if (doingTP)
+		if (delayedTP)
 		{
-			if ((scrapProps[scrapIndex].GetComponent<GrabbableObject>().fallTime >= 1f || scrapProps[scrapIndex].GetComponent<GrabbableObject>().fallTime < fallTimeLastFrame || (scrapProps[scrapIndex].transform.position.y == yLastFrame && yLastFrame < 112)) && wasFallingLastFrame && base.IsServer)
+            delayedTP = false;
+            TeleportProp();
+        }
+        else if (doingTP)
+		{
+            if (base.IsServer)
+            {
+                SetValueClientRpc();
+            }
+            if ((scrapProps[scrapIndex].GetComponent<GrabbableObject>().fallTime >= 1f || scrapProps[scrapIndex].GetComponent<GrabbableObject>().fallTime < fallTimeLastFrame || (scrapProps[scrapIndex].transform.position.y == yLastFrame && yLastFrame < 112)) && wasFallingLastFrame && base.IsServer)
 			{
 				CyclePropClientRpc();
 				if (!doingTP || scrapIndex > 2)
@@ -60,13 +75,22 @@ public class PropTP : NetworkBehaviour
 			fallTimeLastFrame = scrapProps[scrapIndex].GetComponent<GrabbableObject>().fallTime;
 			yLastFrame = scrapProps[scrapIndex].transform.position.y;
 		}
-
-		
 	}
 
-	public void TeleportProp()
+	[ClientRpc]
+	public void SetValueClientRpc()
+	{ if (!base.IsServer)
+		{
+            if (scrapValueNetworked.Value > 0)
+            {
+                scrapValue = scrapValueNetworked.Value;
+            }
+        }
+	}
+
+    public void TeleportProp()
 	{
-		doingTP = true;
+        doingTP = true;
 		StartCoroutine(waitToEndOfFrameToFall());
 	}
 
@@ -78,8 +102,40 @@ public class PropTP : NetworkBehaviour
 
 	public void PropsTeleport()
 	{
-		int i = scrapIndex;
-		int floorYRot = 0;
+        if (base.IsServer)
+        {
+            float scrapValueFloat = TimeOfDay.Instance.profitQuota * (percentOfQuota / 300);
+            if (scrapValueFloat < 50)
+            {
+                scrapValueFloat = 50;
+            }
+            float randomWeight = Random.Range(0.5f, 2.5f);
+            scrapValueFloat *= randomWeight;
+            scrapValue = Mathf.RoundToInt(scrapValueFloat);
+            if (scrapValue < 50)
+            {
+                scrapValue = 50;
+            }
+            else if (scrapValue > 300)
+            {
+                scrapValue = 300;
+            }
+            if (scrapValue == priorScrapValue)
+            {
+                scrapValue += 2;
+            }
+            scrapValueNetworked.Value = scrapValue;
+            SetValueClientRpc();
+        }
+        if (scrapValue == priorScrapValue || scrapValue == 0)
+        {
+            delayedTP = true;
+            return;
+        }
+        priorScrapValue = scrapValue;
+
+        int i = scrapIndex;
+        int floorYRot = 0;
 		if (i == 0)
 		{
 			scrapProps[i].transform.Rotate(0f,0f,227f,Space.Self);
@@ -95,19 +151,13 @@ public class PropTP : NetworkBehaviour
 			scrapProps[i].transform.Rotate(0f,0f,110f,Space.Self);
 			floorYRot = 110;
 		}
-
-		scrapProps[i].transform.position = scrapProps[i].transform.position + posDiff;
-		float scrapValueFloat = TimeOfDay.Instance.profitQuota * (percentOfQuota / 300);
-		scrapValue = Mathf.RoundToInt(scrapValueFloat);
-		if (scrapValue < 50)
-		{
-			scrapValue = 50;
-		}
-		else if (scrapValue > 250)
-		{
-			scrapValue = 250;
-		}
-		scrapProps[i].GetComponent<GrabbableObject>().scrapValue = scrapValue;
+        scrapProps[i].transform.position = scrapProps[i].transform.position + posDiff;
+        if (scrapValue == 0)
+        {
+            delayedTP = true;
+            return;
+        }
+        scrapProps[i].GetComponent<GrabbableObject>().scrapValue = scrapValue;
 		scanNodes[i].GetComponentInChildren<ScanNodeProperties>().scrapValue = scrapValue;
 		scanNodes[i].GetComponentInChildren<ScanNodeProperties>().subText = $"Value: {scrapValue}";
 		//GetPhysicsRegionOfDroppedObject function
@@ -139,7 +189,7 @@ public class PropTP : NetworkBehaviour
 			placeObject.targetFloorPosition = hitPoint;
 			placeObject.floorYRot = floorYRot;
 			placeObject.fallTime = 0f;
-			DropObjectServerRpc(floorYRot, hitPoint, scrapProps[i].GetComponent<NetworkObject>(), i);
+            DropObjectServerRpc(floorYRot, hitPoint, scrapProps[i].GetComponent<NetworkObject>(), i);
 		}
 		else
 		{
@@ -160,9 +210,6 @@ public class PropTP : NetworkBehaviour
             GrabbableObject component = networkObject.GetComponent<GrabbableObject>();
             //PlaceGrabbableObject function
             component.parentObject = null;
-            component.scrapValue = scrapValue;
-            networkObject.GetComponentInChildren<ScanNodeProperties>().scrapValue = scrapValue;
-            networkObject.GetComponentInChildren<ScanNodeProperties>().subText = $"Value: {scrapValue}";
             component.EnablePhysics(enable: true);
             component.EnableItemMeshes(enable: true);
             component.isHeld = false;
