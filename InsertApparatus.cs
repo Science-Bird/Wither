@@ -20,7 +20,7 @@ public class InsertApparatus : NetworkBehaviour
 	{
 		if (!isInserted)
 		{
-			if (GameNetworkManager.Instance.localPlayerController.currentlyHeldObjectServer != null && GameNetworkManager.Instance.localPlayerController.currentlyHeldObjectServer.itemProperties.itemName == "Apparatus")
+			if (GameNetworkManager.Instance.localPlayerController.currentlyHeldObjectServer != null && (GameNetworkManager.Instance.localPlayerController.currentlyHeldObjectServer.itemProperties.itemName.Contains("Apparatus") || GameNetworkManager.Instance.localPlayerController.currentlyHeldObjectServer.itemProperties.itemName.Contains("apparatus")) && !GameNetworkManager.Instance.localPlayerController.currentlyHeldObjectServer.itemProperties.itemName.Contains("concept"))
 			{
 				if (StartOfRound.Instance.localPlayerUsingController)
 					{
@@ -41,7 +41,7 @@ public class InsertApparatus : NetworkBehaviour
 	public void InsertItem()
 	{
 		PlayerControllerB playerInserting = GameNetworkManager.Instance.localPlayerController;
-		if (playerInserting.currentlyHeldObjectServer != null && playerInserting.currentlyHeldObjectServer.itemProperties.itemName == "Apparatus" && !playerInserting.isGrabbingObjectAnimation)
+		if (playerInserting.currentlyHeldObjectServer != null && (playerInserting.currentlyHeldObjectServer.itemProperties.itemName.Contains("Apparatus") || playerInserting.currentlyHeldObjectServer.itemProperties.itemName.Contains("apparatus")) && !playerInserting.currentlyHeldObjectServer.itemProperties.itemName.Contains("concept") && !playerInserting.isGrabbingObjectAnimation)
 		{
 			playerInserting.DespawnHeldObject();
             objectsEnableTrigger.TriggerAnimation(GameNetworkManager.Instance.localPlayerController);
