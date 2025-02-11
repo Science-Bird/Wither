@@ -2,6 +2,7 @@ using GameNetcodeStuff;
 using System.Collections;
 using Unity.Netcode;
 using UnityEngine;
+using System.Linq;
 
 namespace Wither;
 public class PropTP : NetworkBehaviour
@@ -10,7 +11,7 @@ public class PropTP : NetworkBehaviour
 
 	public Vector3 telePosition;
 
-	public GameObject[] scanNodes;
+	public ScanNodeProperties[] scanNodes;
 
 	private int scrapIndex = 0;
 
@@ -40,15 +41,86 @@ public class PropTP : NetworkBehaviour
 
 	private bool delayedTP = false;
 
-    private void Start()
-	{
-		posDiff = telePosition - scrapProps[0].transform.position;
-		posDiff1 = scrapProps[1].transform.position - scrapProps[0].transform.position;
-        posDiff2 = scrapProps[2].transform.position - scrapProps[0].transform.position;
-    }
+    private bool foundPrefabs = false;
+
+    private int failCount = 0;
+
+    private string[] scrapNames = ["WitheredRobotToy(Clone)", "WitheredOldPhone(Clone)", "WitheredDentures(Clone)"];
 
     private void Update()
 	{
+        if (!foundPrefabs)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                if (GameObject.Find(scrapNames[i]))
+                {
+                    GameObject[] objectList = Resources.FindObjectsOfTypeAll<GameObject>().Where(obj => obj.name == scrapNames[i]).ToArray();
+                    if (objectList.Length > 1)
+                    {
+                        foreach (GameObject obj in objectList)
+                        {
+                            if (!obj.GetComponent<GrabbableObject>().isInShipRoom && !obj.GetComponent<GrabbableObject>().scrapPersistedThroughRounds)
+                            {
+                                scrapProps[i] = obj;
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        scrapProps[i] = GameObject.Find(scrapNames[i]);
+                    }
+                    if (i == 0)
+                    {
+                        foundPrefabs = true;
+                    }
+                }
+                else
+                {
+                    foundPrefabs = false;
+                }
+            }
+            GameObject apparatus = GameObject.Find("DyingLungApparatus(Clone)");
+            GameObject[] appList = Resources.FindObjectsOfTypeAll<GameObject>().Where(obj => obj.name == "DyingLungApparatus(Clone)").ToArray();
+            if (appList.Length > 1)
+            {
+                foreach (GameObject obj in appList)
+                {
+                    if (!obj.GetComponent<GrabbableObject>().isInShipRoom && !obj.GetComponent<GrabbableObject>().scrapPersistedThroughRounds)
+                    {
+                        apparatus = obj;
+                        break;
+                    }
+                }
+            }
+            LungProp lungScript = apparatus.GetComponentInChildren<LungProp>();
+            lungScript.isLungPowered = true;
+            lungScript.isLungDocked = true;
+            AudioSource lungAudio = apparatus.GetComponentInChildren<AudioSource>();
+            lungAudio.loop = true;
+            lungAudio.Play();
+
+            if (foundPrefabs)
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    scanNodes[i] = scrapProps[i].GetComponentInChildren<ScanNodeProperties>();
+                }
+                telePosition += new Vector3(0.5f, 0f, 0.5f);
+                posDiff = telePosition - scrapProps[0].transform.position;
+                posDiff1 = scrapProps[1].transform.position - scrapProps[0].transform.position;
+                posDiff2 = scrapProps[2].transform.position - scrapProps[0].transform.position;
+            }
+            else
+            {
+                failCount += 1;
+            } 
+            if (failCount >= 180)
+            {
+                foundPrefabs = true;
+            }
+        }
 		if (delayedTP)
 		{
             delayedTP = false;
@@ -158,8 +230,8 @@ public class PropTP : NetworkBehaviour
             return;
         }
         scrapProps[i].GetComponent<GrabbableObject>().scrapValue = scrapValue;
-		scanNodes[i].GetComponentInChildren<ScanNodeProperties>().scrapValue = scrapValue;
-		scanNodes[i].GetComponentInChildren<ScanNodeProperties>().subText = $"Value: {scrapValue}";
+		scanNodes[i].scrapValue = scrapValue;
+		scanNodes[i].subText = $"Value: {scrapValue}";
 		//GetPhysicsRegionOfDroppedObject function
 		Vector3 hitPoint;
 		Transform transform = null;

@@ -23,13 +23,13 @@ public class InsertApparatus : NetworkBehaviour
 			if (GameNetworkManager.Instance.localPlayerController.currentlyHeldObjectServer != null && (GameNetworkManager.Instance.localPlayerController.currentlyHeldObjectServer.itemProperties.itemName.Contains("Apparatus") || GameNetworkManager.Instance.localPlayerController.currentlyHeldObjectServer.itemProperties.itemName.Contains("apparatus")) && !GameNetworkManager.Instance.localPlayerController.currentlyHeldObjectServer.itemProperties.itemName.Contains("concept"))
 			{
 				if (StartOfRound.Instance.localPlayerUsingController)
-					{
-						insertTrigger.hoverTip = "Insert apparatus: [D-pad up]";
-					}
+				{
+					insertTrigger.hoverTip = "Insert apparatus: [D-pad up]";
+				}
 				else
-					{
-						insertTrigger.hoverTip = "Insert apparatus: [ E ]";
-					}
+				{
+					insertTrigger.hoverTip = "Insert apparatus: [ E ]";
+				}
 			}
 			else
 			{
@@ -43,10 +43,10 @@ public class InsertApparatus : NetworkBehaviour
 		PlayerControllerB playerInserting = GameNetworkManager.Instance.localPlayerController;
 		if (playerInserting.currentlyHeldObjectServer != null && (playerInserting.currentlyHeldObjectServer.itemProperties.itemName.Contains("Apparatus") || playerInserting.currentlyHeldObjectServer.itemProperties.itemName.Contains("apparatus")) && !playerInserting.currentlyHeldObjectServer.itemProperties.itemName.Contains("concept") && !playerInserting.isGrabbingObjectAnimation)
 		{
-			playerInserting.DespawnHeldObject();
-            objectsEnableTrigger.TriggerAnimation(GameNetworkManager.Instance.localPlayerController);
-            animatedDoorTrigger.TriggerAnimation(GameNetworkManager.Instance.localPlayerController);
+			UnityEngine.Object.Destroy(playerInserting.currentlyHeldObjectServer.radarIcon.gameObject);
+			playerInserting.DestroyItemInSlotAndSync(playerInserting.currentItemSlot);
+			objectsEnableTrigger.TriggerAnimation(GameNetworkManager.Instance.localPlayerController);
+			animatedDoorTrigger.TriggerAnimation(GameNetworkManager.Instance.localPlayerController);
 		}
 	}
 }
-

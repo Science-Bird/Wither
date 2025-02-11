@@ -14,6 +14,6 @@ public class RunAnimScripts : NetworkBehaviour
 	{
 		animatedObjectTrigger.TriggerAnimation(GameNetworkManager.Instance.localPlayerController);
 		scriptEvent.GetComponent<PropTP>().TeleportProp();
-        HUDManager.Instance.ShakeCamera(ScreenShakeType.Big);
+        HUDManager.Instance.ShakeCamera(ScreenShakeType.VeryStrong);
     }
 }
