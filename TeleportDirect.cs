@@ -19,8 +19,6 @@ public class TeleportDirect : NetworkBehaviour
 
 	private InteractTrigger triggerScript;
 
-	public float timeAtLastUse;
-
 	public bool isEntrance = false;
 
 	private void Awake()
@@ -37,8 +35,14 @@ public class TeleportDirect : NetworkBehaviour
         GameNetworkManager.Instance.localPlayerController.isInHangarShipRoom = false;
         thisPlayerBody.eulerAngles = new Vector3(destPoint.eulerAngles.x, destPoint.eulerAngles.y, destPoint.eulerAngles.z);
 		SetAudioPreset((int)GameNetworkManager.Instance.localPlayerController.playerClientId);
-		timeAtLastUse = Time.realtimeSinceStartup;
-		TeleportDirectPlayerServerRpc((int)GameNetworkManager.Instance.localPlayerController.playerClientId);
+        for (int i = 0; i < GameNetworkManager.Instance.localPlayerController.ItemSlots.Length; i++)
+        {
+            if (GameNetworkManager.Instance.localPlayerController.ItemSlots[i] != null)
+            {
+                GameNetworkManager.Instance.localPlayerController.ItemSlots[i].isInFactory = isEntrance;
+            }
+        }
+        TeleportDirectPlayerServerRpc((int)GameNetworkManager.Instance.localPlayerController.playerClientId);
         GameNetworkManager.Instance.localPlayerController.isInsideFactory = isEntrance;
     }
 
@@ -58,12 +62,17 @@ public class TeleportDirect : NetworkBehaviour
         playersManager.allPlayerScripts[playerObj].isInHangarShipRoom = false;
         PlayAudioAtTeleportPositions();
 		playersManager.allPlayerScripts[playerObj].isInsideFactory = isEntrance;
-
-		if (GameNetworkManager.Instance.localPlayerController.isPlayerDead && playersManager.allPlayerScripts[playerObj] == GameNetworkManager.Instance.localPlayerController.spectatedPlayerScript)
+        for (int i = 0; i < playersManager.allPlayerScripts[playerObj].ItemSlots.Length; i++)
+        {
+            if (playersManager.allPlayerScripts[playerObj].ItemSlots[i] != null)
+            {
+                playersManager.allPlayerScripts[playerObj].ItemSlots[i].isInFactory = isEntrance;
+            }
+        }
+        if (GameNetworkManager.Instance.localPlayerController.isPlayerDead && playersManager.allPlayerScripts[playerObj] == GameNetworkManager.Instance.localPlayerController.spectatedPlayerScript)
 		{
 			SetAudioPreset(playerObj);
 		}
-		timeAtLastUse = Time.realtimeSinceStartup;
 }
 	private void SetAudioPreset(int playerObj)
 	{
