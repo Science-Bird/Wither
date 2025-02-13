@@ -16,9 +16,16 @@ public class InsertApparatus : NetworkBehaviour
 
 	public bool isInserted;
 
-	private void Update()
+	private bool initialSet = true;
+
+    private void Update()
 	{
-		if (!isInserted)
+		if (initialSet)
+		{
+			playersManager = Object.FindObjectOfType<StartOfRound>();
+			initialSet = false;
+		}
+        if (!isInserted)
 		{
 			if (GameNetworkManager.Instance.localPlayerController.currentlyHeldObjectServer != null && (GameNetworkManager.Instance.localPlayerController.currentlyHeldObjectServer.itemProperties.itemName.Contains("Apparatus") || GameNetworkManager.Instance.localPlayerController.currentlyHeldObjectServer.itemProperties.itemName.Contains("apparatus")) && !GameNetworkManager.Instance.localPlayerController.currentlyHeldObjectServer.itemProperties.itemName.Contains("concept"))
 			{
@@ -43,10 +50,27 @@ public class InsertApparatus : NetworkBehaviour
 		PlayerControllerB playerInserting = GameNetworkManager.Instance.localPlayerController;
 		if (playerInserting.currentlyHeldObjectServer != null && (playerInserting.currentlyHeldObjectServer.itemProperties.itemName.Contains("Apparatus") || playerInserting.currentlyHeldObjectServer.itemProperties.itemName.Contains("apparatus")) && !playerInserting.currentlyHeldObjectServer.itemProperties.itemName.Contains("concept") && !playerInserting.isGrabbingObjectAnimation)
 		{
-			UnityEngine.Object.Destroy(playerInserting.currentlyHeldObjectServer.radarIcon.gameObject);
-			playerInserting.DestroyItemInSlotAndSync(playerInserting.currentItemSlot);
-			objectsEnableTrigger.TriggerAnimation(GameNetworkManager.Instance.localPlayerController);
+            UnityEngine.Object.Destroy(playerInserting.currentlyHeldObjectServer.radarIcon.gameObject);
+            DestroyItemServerRpc((int)playerInserting.playerClientId);
+            playerInserting.DestroyItemInSlotAndSync(playerInserting.currentItemSlot);
+            objectsEnableTrigger.TriggerAnimation(GameNetworkManager.Instance.localPlayerController);
 			animatedDoorTrigger.TriggerAnimation(GameNetworkManager.Instance.localPlayerController);
 		}
+	}
+
+    [ServerRpc(RequireOwnership = false)]
+    public void DestroyItemServerRpc(int playerObj)
+    {
+        DestroyItemClientRpc(playerObj);
+    }
+
+	[ClientRpc]
+	public void DestroyItemClientRpc(int playerObj)
+	{
+		if (playersManager.allPlayerScripts[playerObj] == GameNetworkManager.Instance.localPlayerController)
+		{
+			return;
+		}
+		UnityEngine.Object.Destroy(playersManager.allPlayerScripts[playerObj].currentlyHeldObjectServer.radarIcon.gameObject);
 	}
 }

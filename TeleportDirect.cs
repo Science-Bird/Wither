@@ -1,4 +1,6 @@
+using System;
 using System.Collections;
+using System.Reflection;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -21,11 +23,28 @@ public class TeleportDirect : NetworkBehaviour
 
 	public bool isEntrance = false;
 
+	private bool mrovPresent = false;
+
 	private void Awake()
 	{
-		playersManager = Object.FindObjectOfType<StartOfRound>();
+		playersManager = UnityEngine.Object.FindObjectOfType<StartOfRound>();
 		triggerScript = base.gameObject.GetComponent<InteractTrigger>();
-	}
+        foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            foreach (Type type in assembly.GetTypes())
+            {
+				if (type.Namespace == "WeatherRegistry")
+				{
+					mrovPresent = true;
+					break;
+				}
+            }
+			if (mrovPresent)
+			{
+				break;
+			}
+        }
+    }
 
 	public void TeleportPlayer()
 	{
@@ -43,7 +62,12 @@ public class TeleportDirect : NetworkBehaviour
             }
         }
         TeleportDirectPlayerServerRpc((int)GameNetworkManager.Instance.localPlayerController.playerClientId);
-        GameNetworkManager.Instance.localPlayerController.isInsideFactory = isEntrance;
+
+            GameNetworkManager.Instance.localPlayerController.isInsideFactory = isEntrance;
+		if (mrovPresent)
+		{
+            SetWeatherMrov.EnableWeather();
+        }
     }
 
 	[ServerRpc(RequireOwnership = false)]
@@ -78,7 +102,7 @@ public class TeleportDirect : NetworkBehaviour
 	{
 		if (audioReverbPreset != -1)
 		{
-			Object.FindObjectOfType<AudioReverbPresets>().audioPresets[audioReverbPreset].ChangeAudioReverbForPlayer(StartOfRound.Instance.allPlayerScripts[playerObj]);
+			UnityEngine.Object.FindObjectOfType<AudioReverbPresets>().audioPresets[audioReverbPreset].ChangeAudioReverbForPlayer(StartOfRound.Instance.allPlayerScripts[playerObj]);
 			if (entrancePointAudio != null)
 			{
 				PlayAudioAtTeleportPositions();
@@ -90,8 +114,8 @@ public class TeleportDirect : NetworkBehaviour
 	{
 		if (doorAudios.Length != 0)
 		{
-			entrancePointAudio.PlayOneShot(doorAudios[Random.Range(0, doorAudios.Length)]);
-			destPointAudio.PlayOneShot(doorAudios[Random.Range(0, doorAudios.Length)]);
+			entrancePointAudio.PlayOneShot(doorAudios[UnityEngine.Random.Range(0, doorAudios.Length)]);
+			destPointAudio.PlayOneShot(doorAudios[UnityEngine.Random.Range(0, doorAudios.Length)]);
 		}
 	}
 }
