@@ -50,7 +50,10 @@ public class InsertApparatus : NetworkBehaviour
 		PlayerControllerB playerInserting = GameNetworkManager.Instance.localPlayerController;
 		if (playerInserting.currentlyHeldObjectServer != null && (playerInserting.currentlyHeldObjectServer.itemProperties.itemName.Contains("Apparatus") || playerInserting.currentlyHeldObjectServer.itemProperties.itemName.Contains("apparatus")) && !playerInserting.currentlyHeldObjectServer.itemProperties.itemName.Contains("concept") && !playerInserting.isGrabbingObjectAnimation)
 		{
-            UnityEngine.Object.Destroy(playerInserting.currentlyHeldObjectServer.radarIcon.gameObject);
+			if (playerInserting.currentlyHeldObjectServer.radarIcon != null)
+			{
+                UnityEngine.Object.Destroy(playerInserting.currentlyHeldObjectServer.radarIcon.gameObject);
+            }
             DestroyItemServerRpc((int)playerInserting.playerClientId);
             playerInserting.DestroyItemInSlotAndSync(playerInserting.currentItemSlot);
             objectsEnableTrigger.TriggerAnimation(GameNetworkManager.Instance.localPlayerController);
@@ -71,6 +74,9 @@ public class InsertApparatus : NetworkBehaviour
 		{
 			return;
 		}
-		UnityEngine.Object.Destroy(playersManager.allPlayerScripts[playerObj].currentlyHeldObjectServer.radarIcon.gameObject);
+        if (playersManager.allPlayerScripts[playerObj].currentlyHeldObjectServer.radarIcon != null)
+        {
+            UnityEngine.Object.Destroy(playersManager.allPlayerScripts[playerObj].currentlyHeldObjectServer.radarIcon.gameObject);
+        }
 	}
 }

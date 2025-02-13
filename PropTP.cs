@@ -33,8 +33,6 @@ public class PropTP : NetworkBehaviour
 
 	private float yLastFrame = 0f;
 
-    private int priorScrapValue = 0;
-
 	private int scrapValue = 0;
 
 	private bool delayedTP = false;
@@ -63,6 +61,7 @@ public class PropTP : NetworkBehaviour
                 SetWeightValueClientRpc(randomWeights);
 
             }
+            Wither.Logger.LogInfo($"Random weights: {randomWeights[0]}, {randomWeights[1]}, {randomWeights[2]}");
             if (randomWeights[0] != 0f)
             {
                 initialSet = false;
@@ -186,12 +185,12 @@ public class PropTP : NetworkBehaviour
         int floorYRot = 0;
 
         float scrapValueFloat = TimeOfDay.Instance.profitQuota * (percentOfQuota / 300);
-        if (scrapValueFloat < 50)
+        if (scrapValueFloat < 50f)
         {
-            scrapValueFloat = 50;
+            scrapValueFloat = 50f;
         }
         float randomWeight = randomWeights[i];
-        scrapValueFloat *= randomWeight;
+        scrapValueFloat = scrapValueFloat * randomWeight;
         scrapValue = Mathf.RoundToInt(scrapValueFloat);
         if (scrapValue < 50)
         {
@@ -200,10 +199,6 @@ public class PropTP : NetworkBehaviour
         else if (scrapValue > 300)
         {
             scrapValue = 300;
-        }
-        if (scrapValue == priorScrapValue)
-        {
-            scrapValue += 2;
         }
 		if (i == 0)
 		{

@@ -31,18 +31,11 @@ public class TeleportDirect : NetworkBehaviour
 		triggerScript = base.gameObject.GetComponent<InteractTrigger>();
         foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
-            foreach (Type type in assembly.GetTypes())
-            {
-				if (type.Namespace == "WeatherRegistry")
-				{
-					mrovPresent = true;
-					break;
-				}
-            }
-			if (mrovPresent)
+			if (assembly.GetName().Name == "WeatherRegistry")
 			{
+				mrovPresent = true;
 				break;
-			}
+            }
         }
     }
 
