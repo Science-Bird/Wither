@@ -12,7 +12,17 @@ public class NetworkHandler : NetworkBehaviour
         LevelEvent = null;
 
         if (NetworkManager.Singleton.IsHost || NetworkManager.Singleton.IsServer)
-            Instance?.gameObject?.GetComponent<NetworkObject>()?.Despawn();
+        {
+            if (Instance != null)
+            {
+                Instance.gameObject?.GetComponent<NetworkObject>()?.Despawn();
+            }
+            else
+            {
+                Wither.Logger.LogWarning("Null instance! Network object despawn failed.");
+            }
+        }
+            
         Instance = this;
 
         base.OnNetworkSpawn();

@@ -13,11 +13,11 @@ public class PropTP : NetworkBehaviour
 
 	public ScanNodeProperties[] scanNodes;
 
-	private int scrapIndex = 0;
+	private int scrapIndex = -1;
 
 	private bool wasFallingLastFrame = false;
 
-	private bool doingTP = false;
+	public static bool doingTP = false;
 
 	public AudioSource clangPlayer;
 
@@ -47,26 +47,25 @@ public class PropTP : NetworkBehaviour
 
     private bool initialSet = true;
 
+    private System.Random weightRandom;
+
+    public static bool propReady = false;
+
+    private int propCycleFailsafe = 0;
+
     private void Update()
 	{
         if (initialSet)
         {
-            if (base.IsServer)
+            if (Patches.SeedWeightRandom.randomWeightsTemp[0] > 0f)
             {
-                for (int i = 0; i < 3; i++)
-                {
-                    float randomWeight = Random.Range(0.5f, 2.5f);
-                    randomWeights[i] = randomWeight;
-                }
-                SetWeightValueClientRpc(randomWeights);
-
-            }
-            Wither.Logger.LogInfo($"Random weights: {randomWeights[0]}, {randomWeights[1]}, {randomWeights[2]}");
-            if (randomWeights[0] != 0f)
-            {
+                propReady = false;
+                randomWeights = Patches.SeedWeightRandom.randomWeightsTemp;
                 initialSet = false;
+                Patches.SeedWeightRandom.randomWeightsTemp = [0f, 0f, 0f];
             }
         }
+
         if (!foundPrefabs)
         {
             for (int i = 0; i < 3; i++)
@@ -91,6 +90,7 @@ public class PropTP : NetworkBehaviour
                     }
                     if (i == 0)
                     {
+                        Wither.Logger.LogDebug("Found prefabs!");
                         foundPrefabs = true;
                     }
                 }
@@ -107,6 +107,7 @@ public class PropTP : NetworkBehaviour
                 {
                     if (!obj.GetComponent<GrabbableObject>().isInShipRoom && !obj.GetComponent<GrabbableObject>().scrapPersistedThroughRounds)
                     {
+                        Wither.Logger.LogDebug("Found apparatus!");
                         apparatus = obj;
                         break;
                     }
@@ -134,19 +135,34 @@ public class PropTP : NetworkBehaviour
             {
                 failCount += 1;
             } 
-            if (failCount >= 180)
+            if (failCount >= 100)
             {
                 foundPrefabs = true;
             }
         }
-        else if (doingTP)
+        if (doingTP && scrapIndex >= 0)
 		{
-            if ((scrapProps[scrapIndex].GetComponent<GrabbableObject>().fallTime >= 1f || scrapProps[scrapIndex].GetComponent<GrabbableObject>().fallTime < fallTimeLastFrame || (scrapProps[scrapIndex].transform.position.y == yLastFrame && yLastFrame < 112)) && wasFallingLastFrame && base.IsServer)
+            if (base.IsServer)
+            {
+                propCycleFailsafe += 1;
+                if (propCycleFailsafe >= 150)
+                {
+                    Wither.Logger.LogWarning($"Never recieved fall! Falling back to failsafe...");
+                    propReady = true;
+                }
+            }
+            GrabbableObject currentProp = scrapProps[scrapIndex].GetComponent<GrabbableObject>();
+
+            if (propReady && base.IsServer)
 			{
-				CyclePropClientRpc();
+                propCycleFailsafe = 0;
+                propReady = false;
+                Wither.Logger.LogDebug("Cycling prop...");
+                CyclePropClientRpc();
 				if (!doingTP || scrapIndex > 2)
 				{
-                    Wither.Logger.LogDebug("Prop TP finished.");
+                    Wither.Logger.LogInfo("Prop TP finished.");
+                    doingTP = false;
                     return;
 				}
             }
@@ -157,15 +173,6 @@ public class PropTP : NetworkBehaviour
 			yLastFrame = scrapProps[scrapIndex].transform.position.y;
 		}
 	}
-
-    [ClientRpc]
-    public void SetWeightValueClientRpc(float[] vals)
-    {
-        if (!base.IsServer)
-        {
-            randomWeights = vals;
-        }
-    }
 
     public void TeleportProp()
 	{
@@ -181,6 +188,7 @@ public class PropTP : NetworkBehaviour
 
 	public void PropsTeleport()
 	{
+        scrapIndex += 1;
         int i = scrapIndex;
         int floorYRot = 0;
 
@@ -200,7 +208,7 @@ public class PropTP : NetworkBehaviour
         {
             scrapValue = 300;
         }
-		if (i == 0)
+        if (i == 0)
 		{
 			scrapProps[i].transform.Rotate(0f,0f,227f,Space.Self);
 			floorYRot = 227;
@@ -215,12 +223,13 @@ public class PropTP : NetworkBehaviour
 			scrapProps[i].transform.Rotate(0f,0f,110f,Space.Self);
 			floorYRot = 110;
 		}
+        scrapProps[i].GetComponent<GrabbableObject>().grabbable = false;
         scrapProps[i].transform.position = scrapProps[i].transform.position + posDiff;
         scrapProps[i].GetComponent<GrabbableObject>().scrapValue = scrapValue;
 		scanNodes[i].scrapValue = scrapValue;
 		scanNodes[i].subText = $"Value: {scrapValue}";
-		//GetPhysicsRegionOfDroppedObject function
-		Vector3 hitPoint;
+        //GetPhysicsRegionOfDroppedObject function
+        Vector3 hitPoint;
 		Transform transform = null;
 		RaycastHit hitInfo;
 		Ray ray = new Ray(scrapProps[i].transform.position, -Vector3.up);
@@ -233,9 +242,8 @@ public class PropTP : NetworkBehaviour
 		if (transform != null)
 		{
 			hitPoint = hitInfo.point + Vector3.up * 0.04f + scrapProps[i].GetComponent<GrabbableObject>().itemProperties.verticalOffset * Vector3.up;
-
-			//PlaceGrabbableObject function
-			GrabbableObject placeObject = scrapProps[i].GetComponent<GrabbableObject>();
+            //PlaceGrabbableObject function
+            GrabbableObject placeObject = scrapProps[i].GetComponent<GrabbableObject>();
 			placeObject.parentObject = null;
 			placeObject.EnablePhysics(enable: true);
 			placeObject.EnableItemMeshes(enable: true);
@@ -246,8 +254,8 @@ public class PropTP : NetworkBehaviour
 			placeObject.transform.position = placeObject.transform.position;
 			placeObject.startFallingPosition = placeObject.transform.position;
 			placeObject.targetFloorPosition = hitPoint;
-			placeObject.floorYRot = floorYRot;
-			placeObject.fallTime = 0f;
+            placeObject.floorYRot = floorYRot;
+            placeObject.fallTime = 0f;
             DropObjectServerRpc(floorYRot, hitPoint, scrapProps[i].GetComponent<NetworkObject>(), i);
 		}
 		else
@@ -309,16 +317,49 @@ public class PropTP : NetworkBehaviour
     [ClientRpc]
     public void CyclePropClientRpc()
 {	{
+        if (scrapIndex > 2 || scrapIndex < 0)
+        {
+            Wither.Logger.LogError($"Invalid scrap index {scrapIndex}!");
+            if (scrapIndex < 0)
+            {
+                TeleportProp();
+            }
+            else if (scrapIndex > 2)
+            {
+                Wither.Logger.LogDebug("Making props grabbable... (EDGE CASE)");
+                for (int i = 0; i < 3; i++)
+                {
+                    AnimatedItem scrapPropAnim = scrapProps[i].GetComponentInChildren<AnimatedItem>();
+                    if (scrapPropAnim.itemRandomChance == null)
+                    {
+                        Wither.Logger.LogInfo("Fixing System.Random!");
+                        scrapPropAnim.itemRandomChance = new System.Random(StartOfRound.Instance.randomMapSeed + StartOfRound.Instance.currentLevelID + scrapPropAnim.itemProperties.itemId);
+                    }
+                    scrapProps[i].GetComponent<GrabbableObject>().grabbable = true;
+                }
+                doingTP = false;
+            }
+        }
         clangPlayer.PlayOneShot(scrapProps[scrapIndex].GetComponent<GrabbableObject>().itemProperties.dropSFX);
         WalkieTalkie.TransmitOneShotAudio(clangPlayer, scrapProps[scrapIndex].GetComponent<GrabbableObject>().itemProperties.dropSFX);
         wasFallingLastFrame = false;
         if (scrapIndex < 2)
         {
-            scrapIndex += 1;
             TeleportProp();
         }
         else
         {
+            Wither.Logger.LogDebug("Making props grabbable...");
+            for (int i = 0; i < 3; i++)
+            {
+                AnimatedItem scrapPropAnim = scrapProps[i].GetComponentInChildren<AnimatedItem>();
+                if (scrapPropAnim.itemRandomChance == null)
+                {
+                        Wither.Logger.LogInfo("Fixing System.Random!");
+                        scrapPropAnim.itemRandomChance = new System.Random(StartOfRound.Instance.randomMapSeed + StartOfRound.Instance.currentLevelID + scrapPropAnim.itemProperties.itemId);
+                }
+                scrapProps[i].GetComponent<GrabbableObject>().grabbable = true;
+            }
             doingTP = false;
         }
     }
