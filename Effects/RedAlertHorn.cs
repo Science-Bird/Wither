@@ -2,41 +2,43 @@ using GameNetcodeStuff;
 using System.Collections;
 using Unity.Netcode;
 using UnityEngine;
+using Wither.Inside;
 
-namespace Wither;
-public class LoopAudibleHorn : NetworkBehaviour
-{	
-	public Transform noisePosition;
+namespace Wither.Effects;
+public class RedAlertHorn : NetworkBehaviour
+{
+    public Transform noisePosition;
 
-	public AudioSource hornPlayer;
+    public AudioSource hornPlayer;
 
-	public bool isPlaying = true;
+    public bool isPlaying = true;
 
-	public int loopCounter = 16;
+    public int loopCounter = 16;
 
     public AudioClip rumbleClip;
 
-	private float loopTimer = 2f;
+    private float loopTimer = 2f;
 
-	private void Update()
-	{
-		if (isPlaying)
-		{
+    private void Update()
+    {
+        if (isPlaying)
+        {
             LoopAudio();
-		}
-	}
+        }
+    }
 
-	public void LoopAudio()
-	{
+    public void LoopAudio()
+    {
         if (!hornPlayer.isPlaying)
         {
             hornPlayer.Play();
             loopCounter -= 1;
-            if (!GameNetworkManager.Instance.localPlayerController.isInsideFactory)
+            if (!GameNetworkManager.Instance.localPlayerController.isInsideFactory || InFactoryTrigger.isInFalseInterior)
             {
                 HUDManager.Instance.ShakeCamera(ScreenShakeType.Big);
                 SoundManager.Instance.PlaySoundAroundLocalPlayer(rumbleClip, 0.65f);
             }
+
         }
         if (loopTimer <= 0f)
         {

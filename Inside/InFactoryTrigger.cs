@@ -2,7 +2,7 @@ using GameNetcodeStuff;
 using Unity.Netcode;
 using UnityEngine;
 
-namespace Wither;
+namespace Wither.Inside;
 public class InFactoryTrigger : NetworkBehaviour
 {
     public static bool isInFalseInterior = false;
@@ -12,7 +12,7 @@ public class InFactoryTrigger : NetworkBehaviour
     private void Awake()
     {
         isInFalseInterior = false;
-        playersManager = Object.FindObjectOfType<StartOfRound>();
+        playersManager = FindObjectOfType<StartOfRound>();
     }
 
     private void OnTriggerEnter(Collider other)

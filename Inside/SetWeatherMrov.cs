@@ -4,11 +4,11 @@ using System.Reflection;
 using Unity.Netcode;
 using UnityEngine;
 
-namespace Wither;
+namespace Wither.Inside;
 public class SetWeatherMrov : NetworkBehaviour
 {
-	public static void EnableWeather()
-	{
-		WeatherRegistry.WeatherEffectController.EnableCurrentWeatherEffects();
-	}
+    public static void EnableWeather()
+    {
+        WeatherRegistry.WeatherEffectController.EnableCurrentWeatherEffects();
+    }
 }

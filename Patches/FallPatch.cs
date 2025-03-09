@@ -1,6 +1,7 @@
 using UnityEngine;
 using HarmonyLib;
 using System;
+using Wither.Mechanics;
 
 namespace Wither.Patches;
 

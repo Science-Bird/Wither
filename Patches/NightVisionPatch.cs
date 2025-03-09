@@ -2,6 +2,7 @@ using UnityEngine;
 using HarmonyLib;
 using System;
 using GameNetcodeStuff;
+using Wither.Inside;
 
 namespace Wither.Patches;
 

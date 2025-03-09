@@ -4,10 +4,14 @@ using Unity.Netcode;
 using UnityEngine;
 
 namespace Wither;
-public class EnableScrapSpawn : NetworkBehaviour
+public class MysteriousScrap : NetworkBehaviour
 {
-	public int rarityPoint = 100;
-	public void SetRarity(bool configVal)
+	private void OnEnable()
+	{
+		SetRarity();
+    }
+
+    public void SetRarity()
 	{
 		if (RoundManager.Instance.currentLevel != null)
 		{
@@ -20,10 +24,10 @@ public class EnableScrapSpawn : NetworkBehaviour
 					break;
 				}
             }
-            Wither.Logger.LogDebug($"Setting spawning to {configVal} for strange scrap (rarity {rarityPoint}, index {index}).");
-            if (configVal)
+            Wither.Logger.LogDebug($"Setting spawning to {Wither.MysteriousScrap.Value} for strange scrap (rarity {Wither.MysteriousScrapRarity.Value}, index {index}).");
+            if (Wither.MysteriousScrap.Value)
 			{
-				RoundManager.Instance.currentLevel.spawnableScrap[index].rarity = rarityPoint;
+				RoundManager.Instance.currentLevel.spawnableScrap[index].rarity = Wither.MysteriousScrapRarity.Value;
 			}
 			else {
 				RoundManager.Instance.currentLevel.spawnableScrap[index].rarity = 0;

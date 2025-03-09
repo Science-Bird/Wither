@@ -17,6 +17,8 @@ public class SeedWeightRandom
     [HarmonyPostfix]
     static void SetWeights(RoundManager __instance)
     {
+        if (__instance.currentLevel.PlanetName != "115 Wither") { return; }
+
         weightRandom = new System.Random(StartOfRound.Instance.randomMapSeed);
         for (int i = 0; i < 3; i++)
         {
