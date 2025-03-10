@@ -56,6 +56,10 @@ public class ModdedApparatusConfig
             {
                 continue;
             }
+            if (apparatus.Value.Item2.ToLower().Contains("dull apparatus") || apparatus.Value.Item2.ToLower().Contains("mech apparatus"))
+            {
+                defaultPosValue = "0.07,0,0";
+            }
             configDict.TryAdd(apparatus.Key, (Wither.Instance.Config.Bind("Rotation Offsets", $"{apparatus.Value.Item2} III {apparatus.Value.Item1}", defaultRotValue, "If this apparatus is appearing incorrectly in the socket, adjust its rotation here (should be a comma-separated string of x,y,z rotation angles)."), Wither.Instance.Config.Bind("Position Offsets", $"{apparatus.Value.Item2} III {apparatus.Value.Item1}", defaultPosValue, "If this apparatus is appearing incorrectly in the socket, adjust its position here (should be a comma-separated string of x,y,z displacement).")));
         }
     }
