@@ -1,3 +1,4 @@
+using GameNetcodeStuff;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -8,61 +9,55 @@ public class CustomElevatorController : NetworkBehaviour
 
     public Transform elevatorPoint;
 
-    public bool elevatorFinishedMoving;
-
     public float elevatorFinishTimer;
-
-    public bool elevatorIsAtBottom;
-
-    public bool elevatorCalled;
-
-    public bool elevatorMovingDown;
-
-    private bool movingDownLastFrame = true;
-
-    public bool calledDown;
-
     public float callCooldown;
 
+    public bool elevatorFinishedMoving;
+    public bool elevatorIsAtBottom;
+    public bool elevatorCalled;
+    public bool elevatorMovingDown;
+    private bool movingDownLastFrame = true;
+    public bool calledDown;
+
     public AudioSource elevatorAudio;
+    public AudioSource elevatorAudioTop;
+    public AudioSource elevatorJingleMusic;
 
     public AudioClip elevatorStartUpSFX;
-
     public AudioClip elevatorStartDownSFX;
-
     public AudioClip elevatorTravelSFX;
-
     public AudioClip elevatorFinishUpSFX;
-
     public AudioClip elevatorFinishDownSFX;
+    public AudioClip elevatorCrashSFX;
+    public AudioClip elevatorSmashSFX;
 
-    public GameObject elevatorCalledBottomButton;
-
-    public GameObject elevatorCalledTopButton;
+    public AudioClip[] elevatorJingleClips;
+    public AudioClip[] elevatorJingleClipsLong;
 
     public Transform elevatorTopPoint;
-
     public Transform elevatorBottomPoint;
-
     public Transform elevatorInsidePoint;
+
+    public Collider crashDamageTrigger;
 
     public Vector3 previousElevatorPosition;
 
     public bool elevatorDoorOpen;
-
-    public AudioSource elevatorJingleMusic;
-
     private bool playMusic;
-
     private bool startedMusic;
 
     private float stopPlayingMusicTimer;
 
-    public AudioClip[] elevatorHalloweenClips;
-
-    public AudioClip[] elevatorHalloweenClipsLoop;
-
     private int selectedTrack = 0;
+
+    public static bool permanentlyDisabled = false;
+
+    // clone of mineshaft elevator which uses Halloween clip system, fixes some minor bugs, and adds some special events for the elevator crash sequence
+
+    public void Start()
+    {
+        permanentlyDisabled = false;
+    }
 
     [ServerRpc]
     public void SetElevatorMusicServerRpc(bool setOn, int track)
@@ -79,18 +74,6 @@ public class CustomElevatorController : NetworkBehaviour
             selectedTrack = track;
             playMusic = setOn;
         }
-    }
-    private void OnEnable()
-    {
-        //RoundManager.Instance.currentMineshaftElevator = this;
-        Wither.Logger.LogDebug("Skipping elevator instance.");
-
-    }
-
-    private void OnDisable()
-    {
-        //RoundManager.Instance.currentMineshaftElevator = null;
-        Wither.Logger.LogDebug("Skipping elevator instance.");
     }
 
     public void LateUpdate()
@@ -131,16 +114,16 @@ public class CustomElevatorController : NetworkBehaviour
             stopPlayingMusicTimer = 1.5f;
             if (!elevatorJingleMusic.isPlaying)
             {
-                Wither.Logger.LogDebug($"Elevator playing track {selectedTrack}");
+                //Wither.Logger.LogDebug($"Elevator playing track {selectedTrack}");
                 if (elevatorMovingDown)
                 {
-                    elevatorJingleMusic.clip = elevatorHalloweenClips[selectedTrack];
+                    elevatorJingleMusic.clip = elevatorJingleClips[selectedTrack];
                     elevatorJingleMusic.Play();
                     elevatorJingleMusic.volume = 1f;
                 }
                 else
                 {
-                    elevatorJingleMusic.clip = elevatorHalloweenClipsLoop[selectedTrack];
+                    elevatorJingleMusic.clip = elevatorJingleClipsLong[selectedTrack];
                     elevatorJingleMusic.Play();
                     elevatorJingleMusic.volume = 1f;
                 }
@@ -148,8 +131,6 @@ public class CustomElevatorController : NetworkBehaviour
             elevatorJingleMusic.pitch = Mathf.Clamp(elevatorJingleMusic.pitch += Time.deltaTime * 2f, 0.3f, 1f);
         }
         elevatorAnimator.SetBool("ElevatorGoingUp", !elevatorMovingDown);
-        elevatorCalledTopButton.SetActive(!elevatorMovingDown || elevatorCalled);
-        elevatorCalledBottomButton.SetActive(elevatorMovingDown || elevatorCalled);
         if (elevatorMovingDown != movingDownLastFrame)
         {
             movingDownLastFrame = elevatorMovingDown;
@@ -183,7 +164,7 @@ public class CustomElevatorController : NetworkBehaviour
         {
             startedMusic = true;
             playMusic = true;
-            selectedTrack = Random.Range(0, elevatorHalloweenClips.Length);
+            selectedTrack = Random.Range(0, elevatorJingleClips.Length);
             SetElevatorMusicServerRpc(setOn: true, selectedTrack);
         }
         if (elevatorFinishedMoving)
@@ -204,7 +185,7 @@ public class CustomElevatorController : NetworkBehaviour
         else if (elevatorFinishTimer <= 0f)
         {
             elevatorFinishedMoving = true;
-            Wither.Logger.LogDebug("Elevator finished moving!");
+            //Wither.Logger.LogDebug("Elevator finished moving!");
             PlayFinishAudio(!elevatorMovingDown);
             ElevatorFinishServerRpc(!elevatorMovingDown);
         }
@@ -216,6 +197,7 @@ public class CustomElevatorController : NetworkBehaviour
 
     private void SwitchElevatorDirection()
     {
+        if (permanentlyDisabled) { return; }
         elevatorMovingDown = !elevatorMovingDown;
         elevatorFinishedMoving = false;
         elevatorFinishTimer = 14f;
@@ -231,6 +213,7 @@ public class CustomElevatorController : NetworkBehaviour
             elevatorFinishedMoving = finished;
         }
     }
+
     public void AnimationEvent_ElevatorFinishTop()
     {
         if (!elevatorMovingDown && !elevatorFinishedMoving)
@@ -266,7 +249,7 @@ public class CustomElevatorController : NetworkBehaviour
             elevatorFinishedMoving = true;
             if (IsServer)
             {
-                Wither.Logger.LogDebug("Elevator finished moving B!");
+                //Wither.Logger.LogDebug("Elevator finished moving B!");
                 PlayFinishAudio(!elevatorMovingDown);
                 ElevatorFinishServerRpc(!elevatorMovingDown);
             }
@@ -313,6 +296,32 @@ public class CustomElevatorController : NetworkBehaviour
         else
         {
             elevatorAudio.PlayOneShot(elevatorFinishDownSFX);
+        }
+    }
+
+    public void PlayCrashClip()
+    {
+        HUDManager.Instance.ShakeCamera(ScreenShakeType.VeryStrong);
+        elevatorAudio.PlayOneShot(elevatorCrashSFX);
+        permanentlyDisabled = true;
+    }
+
+    public void PlaySmashClip()
+    {
+        HUDManager.Instance.ShakeCamera(ScreenShakeType.VeryStrong);
+        elevatorAudioTop.PlayOneShot(elevatorSmashSFX);
+        permanentlyDisabled = true;
+    }
+
+    public void AnimationEvent_DoCrashDamage()// damage any players in the elevator (occurs during crash)
+    {
+        if (crashDamageTrigger.CompareTag("Player") && (bool)crashDamageTrigger.gameObject.GetComponent<PlayerControllerB>() && crashDamageTrigger.gameObject.GetComponent<PlayerControllerB>().IsOwner && !crashDamageTrigger.gameObject.GetComponent<PlayerControllerB>().isPlayerDead)
+        {
+            crashDamageTrigger.gameObject.GetComponent<PlayerControllerB>().DamagePlayer(30, causeOfDeath: CauseOfDeath.Inertia);
+        }
+        else if (crashDamageTrigger.bounds.Contains(GameNetworkManager.Instance.localPlayerController.transform.position))
+        {
+            GameNetworkManager.Instance.localPlayerController.DamagePlayer(30, causeOfDeath: CauseOfDeath.Inertia);
         }
     }
 
@@ -368,7 +377,8 @@ public class CustomElevatorController : NetworkBehaviour
     }
     public void CallElevator(bool callDown)
     {
-        Wither.Logger.LogDebug($"Call elevator 0; call down: {callDown}; elevator moving down: {elevatorMovingDown}");
+        if (permanentlyDisabled) { return; }
+        //Wither.Logger.LogDebug($"Call elevator 0; call down: {callDown}; elevator moving down: {elevatorMovingDown}");
         CallElevatorServerRpc(callDown);
     }
 
@@ -380,7 +390,7 @@ public class CustomElevatorController : NetworkBehaviour
 
     public void PressElevatorButtonOnServer(bool requireFinishedMoving = false)
     {
-        if (elevatorFinishedMoving || elevatorFinishTimer < 0.16f && !requireFinishedMoving)
+        if ((elevatorFinishedMoving || (elevatorFinishTimer < 0.16f && !requireFinishedMoving)) && !elevatorJingleMusic.isPlaying)// added isPlaying check to fix vanilla issue with elevator music
         {
             SwitchElevatorDirection();
         }
@@ -388,6 +398,7 @@ public class CustomElevatorController : NetworkBehaviour
 
     public void PressElevatorButton()
     {
+        if (permanentlyDisabled) { return; }
         PressElevatorButtonServerRpc();
     }
 }

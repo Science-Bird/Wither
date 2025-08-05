@@ -1,8 +1,6 @@
 using UnityEngine;
 using HarmonyLib;
-using System;
 using GameNetcodeStuff;
-using Unity.Netcode;
 using Wither.Mechanics;
 
 namespace Wither.Patches;
@@ -13,6 +11,8 @@ public class TooltipPatch
     private RaycastHit hit;
 
     private static bool flag = false;
+
+    // not sure how needed this is anymore, but there were some issues with the grab tooltip lingering on the apparatus after being inserted (specifically with mods like Facility Meltdown), so this overrides that
 
     [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.SetHoverTipAndCurrentInteractTrigger))]
     [HarmonyPrefix]

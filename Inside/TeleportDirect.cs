@@ -1,6 +1,3 @@
-using System;
-using System.Collections;
-using System.Reflection;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -9,7 +6,7 @@ public class TeleportDirect : NetworkBehaviour
 {
     public Transform destPoint;
 
-    public StartOfRound playersManager;
+    public static StartOfRound playersManager;
 
     public int audioReverbPreset = -1;
 
@@ -23,26 +20,14 @@ public class TeleportDirect : NetworkBehaviour
 
     public bool isEntrance = false;
 
-    private bool mrovPresent = false;
-
     private void Awake()
     {
         playersManager = FindObjectOfType<StartOfRound>();
         triggerScript = gameObject.GetComponent<InteractTrigger>();
-        foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
-        {
-            if (assembly.GetName().Name == "WeatherRegistry")
-            {
-                Wither.Logger.LogDebug("Found mrov!");
-                mrovPresent = true;
-                break;
-            }
-        }
     }
 
-    public void TeleportPlayer()
+    public void TeleportPlayer()// mostly copy-paste of vanilla EntranceTeleport code (same for other methods)
     {
-        Wither.Logger.LogDebug("Teleporting to false interior...");
         Transform thisPlayerBody = GameNetworkManager.Instance.localPlayerController.thisPlayerBody;
         GameNetworkManager.Instance.localPlayerController.TeleportPlayer(destPoint.position);
         GameNetworkManager.Instance.localPlayerController.isInElevator = false;
@@ -61,7 +46,7 @@ public class TeleportDirect : NetworkBehaviour
 
         GameNetworkManager.Instance.localPlayerController.isInsideFactory = isEntrance;
 
-        if (mrovPresent)
+        if (Wither.mrovWeatherPresent)// special mrov method which is supposed to run on teleports
         {
             SetWeatherMrov.EnableWeather();
         }
@@ -80,12 +65,16 @@ public class TeleportDirect : NetworkBehaviour
         {
             return;
         }
-        Wither.Logger.LogDebug("Detected teleport to false interior...");
         playersManager.allPlayerScripts[playerObj].TeleportPlayer(destPoint.position, withRotation: true, destPoint.eulerAngles.y);
         playersManager.allPlayerScripts[playerObj].isInElevator = false;
         playersManager.allPlayerScripts[playerObj].isInHangarShipRoom = false;
         PlayAudioAtTeleportPositions();
         playersManager.allPlayerScripts[playerObj].isInsideFactory = isEntrance;
+        if (isEntrance && !InFactoryTrigger.playersInFalseInterior.Contains(playerObj))
+        {
+            //Wither.Logger.LogDebug($"ADDING TO LIST: {playerObj}");
+            InFactoryTrigger.playersInFalseInterior.Add(playerObj);
+        }
         for (int i = 0; i < playersManager.allPlayerScripts[playerObj].ItemSlots.Length; i++)
         {
             if (playersManager.allPlayerScripts[playerObj].ItemSlots[i] != null)

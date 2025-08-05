@@ -1,3 +1,4 @@
+using System.Collections;
 using GameNetcodeStuff;
 using Unity.Netcode;
 using UnityEngine;
@@ -6,16 +7,16 @@ namespace Wither.Mechanics;
 public class CatwalkTrigger : NetworkBehaviour
 {
     private int timesTriggered = 0;
-
     private int triggerThreshold;
 
     public AnimatedObjectTrigger animatedObjectTriggerShake;
-
     public AnimatedObjectTrigger animatedObjectTriggerFall;
 
     private bool initialSet = true;
-
     private bool bridgeFell;
+    private bool onCooldown = false;
+
+    // clone of Adamance bridge script, but with random values and some extra RPCs (this code is really old I think some of this stuff isn't needed anymore, but it works)
 
     private void Update()
     {
@@ -55,6 +56,7 @@ public class CatwalkTrigger : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     public void AddToBridgeInstabilityServerRpc()
     {
+        if (!onCooldown)
         {
             timesTriggered++;
             if (timesTriggered < triggerThreshold)
@@ -66,6 +68,14 @@ public class CatwalkTrigger : NetworkBehaviour
                 bridgeFell = true;
                 animatedObjectTriggerFall.TriggerAnimation(GameNetworkManager.Instance.localPlayerController);
             }
+            StartCoroutine(TriggerCooldown());
         }
+    }
+
+    private IEnumerator TriggerCooldown()
+    {
+        onCooldown = true;
+        yield return new WaitForSeconds(0.6f);
+        onCooldown = false;
     }
 }

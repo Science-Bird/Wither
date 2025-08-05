@@ -15,7 +15,7 @@ public class NetworkObjectManager
         if (networkPrefab != null)
             return;
 
-        networkPrefab = (GameObject)Wither.NetworkAssets.LoadAsset("WitherNetworkHandler");
+        networkPrefab = (GameObject)Wither.ExtraAssets.LoadAsset("WitherNetworkHandler");
         networkPrefab.AddComponent<NetworkHandler>();
 
         NetworkManager.Singleton.AddNetworkPrefab(networkPrefab);

@@ -17,10 +17,6 @@ public class NetworkHandler : NetworkBehaviour
             {
                 Instance.gameObject?.GetComponent<NetworkObject>()?.Despawn();
             }
-            else
-            {
-                Wither.Logger.LogWarning("Null instance! Network object despawn failed.");
-            }
         }
             
         Instance = this;

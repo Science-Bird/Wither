@@ -13,29 +13,24 @@ public class ApparatusRotationPatch
     public static bool initialSet = true;
 
     public static Vector3 rotLastFrame = Vector3.zero;
-
     public static Vector3 targetRotation;
-
     public static Vector3 targetPosition;
-
     public static Vector3 positionOffset;
 
     public static bool posSet = true;
-
     private static bool tempInitial = true;
-
 
     [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.LateUpdate))]
     [HarmonyPostfix]
     [HarmonyAfter("me.loaforc.facilitymeltdown")]
-    static void UpdateRotation(GrabbableObject __instance)
+    static void UpdateRotation(GrabbableObject __instance)// change the rotation/position of an inserted apparatus based on config values
     {
-        if (__instance == Mechanics.InsertApparatus.insertedApparatus && (Mechanics.InsertApparatus.doingInsertion || Mechanics.InsertApparatus.isInserted))
+        if ((Mechanics.InsertApparatus.doingInsertion || Mechanics.InsertApparatus.isInserted) && __instance == Mechanics.InsertApparatus.insertedApparatus)
         {
             __instance.grabbable = false;
             if (initialSet)
             {
-                if (ModdedApparatusConfig.configDict.TryGetValue(__instance.itemProperties, out var value))
+                if (ModdedApparatusConfig.configDict.TryGetValue(__instance.itemProperties, out var value))// grab apparatus rotation/position data from config
                 {
                     string[] rotation = value.Item1.Value.Split(",");
                     string[] position = value.Item2.Value.Split(",");
@@ -85,23 +80,18 @@ public class ApparatusRotationPatch
             {
                 targetPosition = __instance.gameObject.transform.position;
             }
-            //Wither.Logger.LogDebug($"{__instance.gameObject.transform.eulerAngles}, {rotLastFrame}");
-            if ((Mathf.Abs(Quaternion.Dot(__instance.gameObject.transform.rotation, Quaternion.Euler(targetRotation))) < 0.99f || Mathf.Abs((__instance.gameObject.transform.position - targetPosition).magnitude) > 0.005f) && __instance.gameObject.transform.eulerAngles == rotLastFrame)
+            // wait until position and rotation has stabilized, then set intended apparatus transform
+            if ((Mathf.Abs(Quaternion.Dot(__instance.gameObject.transform.rotation, Quaternion.Euler(targetRotation))) < 0.999f || Mathf.Abs((__instance.gameObject.transform.position - targetPosition).magnitude) > 0.005f) && __instance.gameObject.transform.eulerAngles == rotLastFrame)
             {
                 if (posSet && positionOffset != Vector3.zero)
                 {
                     posSet = false;
                     targetPosition = __instance.transform.position + positionOffset;
-                    Wither.Logger.LogDebug($"Setting target position! {targetPosition}");
                 }
-                Wither.Logger.LogDebug($"Fixing apparatus rotation! {__instance.gameObject.transform.eulerAngles}");
                 __instance.transform.eulerAngles = targetRotation;
-                Wither.Logger.LogDebug($"Fixed apparatus rotation! {__instance.gameObject.transform.eulerAngles}");
-                if (!posSet)
+                if (!posSet)// only change position if we have a non-zero offset from config
                 {
-                    Wither.Logger.LogDebug($"Fixing apparatus position! {__instance.gameObject.transform.position}");
                     __instance.transform.position = targetPosition;
-                    Wither.Logger.LogDebug($"Fixed apparatus position! {__instance.gameObject.transform.position}");
                     __instance.targetFloorPosition = __instance.transform.localPosition;
                 }
             }
