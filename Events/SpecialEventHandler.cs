@@ -212,6 +212,7 @@ public class SpecialEventHandler : NetworkBehaviour
         yield return new WaitForSeconds(1.5f);
         // spikes emerge from ground
         spikesAnimator.SetTrigger("emerge");
+        yield return new WaitForSeconds(3f);
         GreenDogPatch.checking = false;
     }
 
