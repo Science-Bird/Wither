@@ -38,6 +38,10 @@ public class ScenePatches
                 AnimatedLightsManager.Instance.EndAlarmSequence();
             }
         }
+        else
+        {
+            onWither = false;
+        }
     }
 
     [HarmonyPatch(typeof(GiantKiwiAI), nameof(GiantKiwiAI.SpawnBirdNest))]
